@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solmarina — Sunset Streets</title>
+<link rel="icon" href="data:,">
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1a1210; font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif; }
+  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  .hidden { display: none !important; }
+  #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  /* ---------- HUD ---------- */
+  #hud { position: fixed; inset: 0; pointer-events: none; color: #fff; z-index: 5; }
+  .panel { background: rgba(12, 10, 18, 0.62); border: 1px solid rgba(255, 190, 90, 0.35); border-radius: 10px; backdrop-filter: blur(2px); }
+  #topleft { position: absolute; top: 14px; left: 14px; padding: 10px 14px; min-width: 210px; }
+  #topleft .label { font-size: 11px; letter-spacing: 2px; color: #ffbe5a; text-transform: uppercase; }
+  #healthbar { margin-top: 5px; height: 12px; background: rgba(255,255,255,0.15); border-radius: 6px; overflow: hidden; }
+  #healthfill { height: 100%; width: 100%; background: linear-gradient(90deg, #37d67a, #a5e34d); border-radius: 6px; transition: width 0.25s; }
+  #healthfill.low { background: linear-gradient(90deg, #ff5a3c, #ff8a3c); }
+  #healthtext { font-size: 12px; margin-top: 4px; color: #e8e2d5; }
+  #topright { position: absolute; top: 14px; right: 14px; padding: 10px 14px; text-align: right; }
+  #money { font-size: 26px; font-weight: 800; color: #7dff9a; text-shadow: 0 2px 6px rgba(0,0,0,0.6); }
+  #stars { font-size: 22px; letter-spacing: 3px; color: #ffd23c; text-shadow: 0 0 10px rgba(255,210,60,0.7); min-height: 28px; }
+  #stars .off { color: rgba(255,255,255,0.25); text-shadow: none; }
+  #wantedlabel { font-size: 11px; letter-spacing: 2px; color: #ff9a7a; text-transform: uppercase; }
+  #minimapwrap { position: absolute; left: 14px; bottom: 14px; padding: 6px; border-radius: 12px; }
+  #minimap { display: block; border-radius: 8px; }
+  #carinfo { position: absolute; left: 14px; bottom: 208px; padding: 8px 12px; font-size: 13px; }
+  #carinfo b { color: #ffbe5a; }
+  #speed { font-size: 22px; font-weight: 800; }
+  #objective { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); padding: 10px 18px; text-align: center; max-width: 560px; }
+  #objective .obj-kicker { font-size: 11px; letter-spacing: 2px; color: #ffbe5a; text-transform: uppercase; }
+  #objective .obj-text { font-size: 16px; font-weight: 700; margin-top: 2px; }
+  #objective .obj-sub { font-size: 12px; color: #cfc8ba; margin-top: 2px; }
+  #message { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); font-size: 30px; font-weight: 900; letter-spacing: 1px; color: #ffe9b0; text-shadow: 0 3px 14px rgba(0,0,0,0.8); text-align: center; }
+  #submessage { position: absolute; left: 50%; top: calc(22% + 44px); transform: translateX(-50%); font-size: 16px; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.8); text-align: center; }
+  #interact { position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%); padding: 8px 16px; font-size: 15px; font-weight: 700; background: rgba(255, 190, 90, 0.92); color: #241a08; border-radius: 8px; }
+  #crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; }
+  #crosshair::before, #crosshair::after { content: ""; position: absolute; background: rgba(255,255,255,0.9); box-shadow: 0 0 4px rgba(0,0,0,0.8); }
+  #crosshair::before { left: 10px; top: 0; width: 2px; height: 22px; }
+  #crosshair::after { left: 0; top: 10px; width: 22px; height: 2px; }
+  #hint { position: absolute; right: 14px; bottom: 14px; padding: 8px 12px; font-size: 12px; color: #d8d2c4; line-height: 1.6; }
+  #hint b { color: #ffbe5a; }
+  #vignette { position: fixed; inset: 0; pointer-events: none; box-shadow: inset 0 0 120px 40px rgba(255, 30, 10, 0.55); opacity: 0; transition: opacity 0.15s; z-index: 6; }
+  #edgearrow { position: absolute; left: 50%; top: 60px; transform: translateX(-50%); font-size: 26px; color: #ffd23c; text-shadow: 0 0 12px rgba(255,210,60,0.9); }
+
+  /* ---------- Menus ---------- */
+  .overlay { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; flex-direction: column; text-align: center; color: #fff; background: linear-gradient(180deg, rgba(20,8,20,0.55) 0%, rgba(20,8,20,0.82) 100%); }
+  .title { font-size: 74px; font-weight: 900; letter-spacing: 8px; margin: 0; background: linear-gradient(180deg, #fff3c4 10%, #ffb03c 55%, #ff5a3c 100%); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: 0 6px 30px rgba(255,120,40,0.35); }
+  .subtitle { font-size: 20px; letter-spacing: 6px; color: #ffd9a0; text-transform: uppercase; margin: 6px 0 0 0; }
+  .story { max-width: 620px; font-size: 16px; line-height: 1.65; color: #f2ead8; margin: 26px 0 0 0; padding: 0 20px; }
+  .btnrow { margin-top: 30px; display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  button { pointer-events: auto; cursor: pointer; font: inherit; font-size: 17px; font-weight: 800; letter-spacing: 1px; color: #241a08; background: linear-gradient(180deg, #ffd23c, #ff9a3c); border: none; border-radius: 10px; padding: 13px 28px; box-shadow: 0 4px 18px rgba(255,150,50,0.45); }
+  button:hover { filter: brightness(1.08); }
+  button.secondary { background: rgba(255,255,255,0.14); color: #fff; border: 1px solid rgba(255,255,255,0.35); box-shadow: none; }
+  .controls { margin-top: 28px; font-size: 13.5px; line-height: 1.9; color: #d8d2c4; background: rgba(0,0,0,0.35); border: 1px solid rgba(255,190,90,0.25); border-radius: 12px; padding: 14px 22px; text-align: left; }
+  .controls b { color: #ffbe5a; }
+  .bigword { font-size: 84px; font-weight: 900; letter-spacing: 10px; margin: 0; }
+  .bigword.red { color: #ff4a3c; text-shadow: 0 0 40px rgba(255,40,20,0.6); }
+  .bigword.blue { color: #5aa8ff; text-shadow: 0 0 40px rgba(60,120,255,0.6); }
+  .bigword.gold { color: #ffd23c; text-shadow: 0 0 40px rgba(255,210,60,0.6); }
+  .small { font-size: 14px; color: #cfc8ba; margin-top: 14px; }
+</style>
+</head>
+<body>
+<canvas id="game" aria-label="Solmarina Sunset Streets: an open-world crime game. Drive, explore the city, take on missions and outrun the police."></canvas>
+<p id="status" role="status" aria-live="polite"></p>
+
+<div id="hud" class="hidden">
+  <div id="topleft" class="panel">
+    <div class="label">Dario Cruz</div>
+    <div id="healthbar"><div id="healthfill"></div></div>
+    <div id="healthtext">Health 100</div>
+  </div>
+  <div id="topright" class="panel">
+    <div id="money">$0</div>
+    <div id="stars"></div>
+    <div id="wantedlabel"></div>
+  </div>
+  <div id="minimapwrap" class="panel"><canvas id="minimap" width="180" height="180"></canvas></div>
+  <div id="carinfo" class="panel hidden"><b id="carname"></b><br><span id="speed">0</span> km/h</div>
+  <div id="objective" class="panel">
+    <div class="obj-kicker" id="objkicker">Mission</div>
+    <div class="obj-text" id="objtext">Welcome to Solmarina</div>
+    <div class="obj-sub" id="objsub"></div>
+  </div>
+  <div id="message"></div>
+  <div id="submessage"></div>
+  <div id="interact" class="hidden"></div>
+  <div id="crosshair" class="hidden"></div>
+  <div id="hint"><b>WASD</b> move / drive &nbsp; <b>Shift</b> run &nbsp; <b>Space</b> jump / handbrake<br><b>E</b> enter car / interact &nbsp; <b>Click</b> shoot &nbsp; <b>F</b> punch<br><b>P</b> pause &nbsp; <b>M</b> mute &nbsp; drag mouse to look around</div>
+  <div id="edgearrow" class="hidden">&#8679;</div>
+</div>
+<div id="vignette"></div>
+
+<div id="menu" class="overlay">
+  <h1 class="title">SOLMARINA</h1>
+  <p class="subtitle">Sunset Streets &mdash; an open-world crime story</p>
+  <p class="story">Dario Cruz owes $5,000 to loan shark Vince Kroll, and the sun is going down on
+  Solmarina. Work for fixer Mara Solano, run her jobs across the city, steal the cars you need,
+  and stay one step ahead of the Solmarina Police. Finish the story, keep the cash.</p>
+  <div class="btnrow">
+    <button id="btncontinue" class="secondary hidden">Continue</button>
+    <button id="btnnew">New Game</button>
+    <button id="btnhow" class="secondary">How to Play</button>
+  </div>
+  <div id="howto" class="controls hidden">
+    <b>W A S D</b> &mdash; move on foot / drive &nbsp;&middot;&nbsp; <b>Shift</b> sprint<br>
+    <b>Space</b> &mdash; jump / handbrake &nbsp;&middot;&nbsp; <b>E</b> &mdash; enter or steal a car, interact<br>
+    <b>Mouse click</b> &mdash; shoot pistol &nbsp;&middot;&nbsp; <b>F</b> &mdash; punch<br>
+    <b>P / Esc</b> &mdash; pause &nbsp;&middot;&nbsp; <b>M</b> &mdash; mute &nbsp;&middot;&nbsp; drag mouse to orbit the camera<br>
+    Steal cars, take missions from the yellow markers, and watch the wanted stars.<br>
+    Lose the police to cool down. If they catch you, you are busted.
+  </div>
+  <p class="small">An original game. No real city, person or brand appears in it. Best played with keyboard and mouse.</p>
+</div>
+
+<div id="pause" class="overlay hidden">
+  <h1 class="bigword gold">PAUSED</h1>
+  <p class="story">The city waits for no one &mdash; except right now.</p>
+  <div class="btnrow">
+    <button id="btnresume">Resume</button>
+    <button id="btnsave" class="secondary">Save Game</button>
+    <button id="btnrestartmission" class="secondary">Restart Mission</button>
+    <button id="btnquit" class="secondary">Quit to Menu</button>
+  </div>
+  <p class="small" id="pausesaved"></p>
+</div>
+
+<div id="end" class="overlay hidden">
+  <h1 class="bigword red" id="endtitle">BUSTED</h1>
+  <p class="story" id="endtext"></p>
+  <div class="btnrow"><button id="btnrespawn">Keep Playing</button></div>
+</div>
+
+<script src="./vendor/three.min.js"></script>
+<script src="./src/util.js"></script>
+<script src="./src/audio.js"></script>
+<script src="./src/city.js"></script>
+<script src="./src/vehicles.js"></script>
+<script src="./src/people.js"></script>
+<script src="./src/missions.js"></script>
+<script src="./src/hud.js"></script>
+<script src="./src/save.js"></script>
+<script src="./src/game.js"></script>
+</body>
+</html>
